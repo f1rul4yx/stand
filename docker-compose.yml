@@ -2,10 +2,15 @@ services:
   stand:
     image: f1rul4yx/stand:latest
     container_name: stand
-    restart: always
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - PORT=3000
       - TZ=Europe/Madrid
       - NODE_ENV=production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
