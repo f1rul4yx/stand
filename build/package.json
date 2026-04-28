@@ -1,0 +1,12 @@
+{
+  "name": "stand",
+  "version": "1.0.0",
+  "description": "Recordatorio para alternar entre sentado y de pie",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

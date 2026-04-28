@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0a05">
+<title>Stand Reminder</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sit-color: #f97316;
+    --sit-glow: #fdba74;
+    --sit-bg: #1a120a;
+    --stand-color: #22c55e;
+    --stand-glow: #86efac;
+    --stand-bg: #0d1f0d;
+    --text: #ede9e3;
+    --text-dim: rgba(255,255,255,0.35);
+    --text-dimmer: rgba(255,255,255,0.18);
+    --surface: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.07);
+    --accent: var(--sit-color);
+    --accent-glow: var(--sit-glow);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: linear-gradient(160deg, #08060a 0%, var(--sit-bg) 50%, #0a0805 100%);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    transition: background 1.2s ease;
+  }
+
+  body.standing {
+    background: linear-gradient(160deg, #050a06 0%, var(--stand-bg) 50%, #060a05 100%);
+    --accent: var(--stand-color);
+    --accent-glow: var(--stand-glow);
+  }
+
+  /* ── Particles ── */
+  .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .particle {
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0;
+    animation: particleFloat var(--dur) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes particleFloat {
+    0%, 100% { opacity: 0; transform: translateY(0) scale(0.4); }
+    50% { opacity: 0.25; transform: translateY(-40px) scale(1); }
+  }
+
+  /* ── Layout ── */
+  .app {
+    position: relative; z-index: 1;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 36px 20px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* ── Header ── */
+  .status-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    color: var(--accent);
+    transition: color 0.8s ease;
+    animation: fadeSlideIn 0.6s ease both;
+  }
+  .title {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    animation: fadeSlideIn 0.6s ease 0.1s both;
+  }
+
+  /* ── Timer Ring ── */
+  .timer-wrap {
+    position: relative;
+    animation: fadeSlideIn 0.8s ease 0.2s both;
+  }
+  .timer-ring { transform: rotate(-90deg); }
+  .ring-bg {
+    fill: none;
+    stroke: var(--accent);
+    opacity: 0.1;
+    stroke-width: 5;
+    transition: stroke 0.8s ease;
+  }
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.8s ease;
+  }
+  .timer-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .time-display {
+    font-family: 'DM Mono', monospace;
+    font-size: 52px;
+    font-weight: 300;
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+  .time-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  /* ── Pulse ring on alert ── */
+  .pulse-ring {
+    position: absolute;
+    inset: -16px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .pulse-ring.active {
+    animation: pulseExpand 0.8s ease-out 3;
+  }
+  @keyframes pulseExpand {
+    0% { transform: scale(1); opacity: 0.5; }
+    100% { transform: scale(1.25); opacity: 0; }
+  }
+
+  /* ── Motivational ── */
+  .motivation {
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-dim);
+    text-align: center;
+    min-height: 22px;
+    animation: fadeSlideIn 0.5s ease both;
+  }
+
+  /* ── Buttons ── */
+  .controls { display: flex; gap: 10px; align-items: center; animation: fadeSlideIn 1s ease 0.3s both; }
+
+  .btn {
+    border: none;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.25s ease;
+    letter-spacing: 0.3px;
+  }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-primary {
+    padding: 14px 34px;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.4); }
+
+  .btn-ghost {
+    padding: 10px 20px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.08); }
+
+  /* ── Stats Grid ── */
+  .stats {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    animation: fadeSlideIn 1.2s ease 0.4s both;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 10px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    transition: color 0.6s ease;
+  }
+  .stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ── Ratio Bar ── */
+  .ratio-section { width: 100%; animation: fadeSlideIn 1.3s ease 0.5s both; }
+  .ratio-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .ratio-track {
+    width: 100%;
+    height: 5px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .ratio-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: width 1s ease, background 0.8s ease;
+  }
+  .ratio-hint {
+    font-size: 11px;
+    color: var(--text-dimmer);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* ── Settings Panel ── */
+  .settings-panel {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    animation: fadeSlideIn 0.4s ease both;
+  }
+  .settings-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .preset-chip {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .preset-chip:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .preset-chip.active {
+    border-color: var(--accent);
+    color: var(--accent-glow);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .slider-group { margin-bottom: 18px; }
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .slider-header span:first-child { color: rgba(255,255,255,0.55); }
+  .slider-header span:last-child { font-family: 'DM Mono', monospace; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    background: rgba(255,255,255,0.08);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.25);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.25);
+    cursor: pointer;
+  }
+  #sitSlider::-webkit-slider-thumb { background: var(--sit-color); }
+  #sitSlider::-moz-range-thumb { background: var(--sit-color); }
+  #standSlider::-webkit-slider-thumb { background: var(--stand-color); }
+  #standSlider::-moz-range-thumb { background: var(--stand-color); }
+
+  .notif-btn {
+    margin-top: 16px;
+    width: 100%;
+    text-align: center;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    font-size: 11px;
+    color: var(--text-dimmer);
+    text-align: center;
+    line-height: 1.7;
+    margin-top: auto;
+    padding-top: 16px;
+  }
+
+  /* ── Alert overlay ── */
+  .alert-overlay {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .alert-overlay.active {
+    animation: alertFlash 0.5s ease 3;
+  }
+  @keyframes alertFlash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hidden { display: none !important; }
+
+  /* ── Mobile adjustments ── */
+  @media (max-height: 700px) {
+    .app { padding-top: 20px; gap: 20px; }
+    .time-display { font-size: 44px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="alert-overlay" id="alertOverlay"></div>
+
+<div class="app">
+  <!-- Header -->
+  <div style="text-align:center">
+    <div class="status-label" id="statusLabel">&#x2B07; Sentado</div>
+    <h1 class="title">Stand Reminder</h1>
+  </div>
+
+  <!-- Timer -->
+  <div class="timer-wrap">
+    <div class="pulse-ring" id="pulseRing"></div>
+    <svg class="timer-ring" width="270" height="270" viewBox="0 0 270 270">
+      <circle class="ring-bg" cx="135" cy="135" r="130" />
+      <circle class="ring-progress" id="ringProgress" cx="135" cy="135" r="130"
+        stroke-dasharray="816.81" stroke-dashoffset="0" />
+    </svg>
+    <div class="timer-content">
+      <div class="time-display" id="timeDisplay">45:00</div>
+      <div class="time-label" id="timeLabel">45 min sentado</div>
+    </div>
+  </div>
+
+  <!-- Motivation -->
+  <div class="motivation" id="motivation">Tu espalda te lo agradecerá</div>
+
+  <!-- Controls -->
+  <div class="controls" id="controls">
+    <button class="btn btn-primary" id="btnStart" onclick="handleStart()">&#x25B6; Empezar</button>
+  </div>
+
+  <!-- Stats (hidden initially) -->
+  <div class="stats hidden" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-value" id="statStand" style="color:var(--stand-color)">0m</div>
+      <div class="stat-label">De pie</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statSit" style="color:var(--sit-color)">0m</div>
+      <div class="stat-label">Sentado</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statCycles" style="color:#a78bfa">0</div>
+      <div class="stat-label">Ciclos</div>
+    </div>
+  </div>
+
+  <!-- Ratio (hidden initially) -->
+  <div class="ratio-section hidden" id="ratioSection">
+    <div class="ratio-header">
+      <span>Ratio de pie</span>
+      <span id="ratioPercent" style="color:var(--accent)">0%</span>
+    </div>
+    <div class="ratio-track">
+      <div class="ratio-fill" id="ratioFill" style="width:0%"></div>
+    </div>
+    <div class="ratio-hint" id="ratioHint">Intenta superar el 25%</div>
+  </div>
+
+  <!-- Settings toggle -->
+  <button class="btn btn-ghost" id="btnSettings" onclick="toggleSettings()">&#x2699; Ajustes de tiempos</button>
+
+  <!-- Settings panel -->
+  <div class="settings-panel hidden" id="settingsPanel">
+    <div class="settings-title">Presets</div>
+    <div class="presets" id="presets"></div>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Sentado</span>
+        <span id="sitValue" style="color:var(--sit-color)">45 min</span>
+      </div>
+      <input type="range" id="sitSlider" min="10" max="90" step="5" value="45" oninput="onSitChange(this.value)">
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>De pie</span>
+        <span id="standValue" style="color:var(--stand-color)">15 min</span>
+      </div>
+      <input type="range" id="standSlider" min="5" max="30" step="5" value="15" oninput="onStandChange(this.value)">
+    </div>
+
+    <button class="btn btn-ghost notif-btn hidden" id="btnNotif" onclick="requestNotif()">
+      &#x1F514; Activar notificaciones
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Déjame abierto en una pestaña<br>Las notificaciones suenan incluso en segundo plano
+  </div>
+</div>
+
+<script>
+// ── State ──
+let sitMinutes = 45, standMinutes = 15;
+let isRunning = false, isStanding = false;
+let secondsLeft = 45 * 60;
+let totalStand = 0, totalSit = 0, cycles = 0;
+let timerInterval = null;
+
+const CIRCUMFERENCE = 2 * Math.PI * 130; // ~816.81
+
+const PRESETS = [
+  { sit: 25, stand: 5, label: "Pomodoro" },
+  { sit: 45, stand: 15, label: "Equilibrado" },
+  { sit: 30, stand: 10, label: "Activo" },
+  { sit: 60, stand: 10, label: "Concentrado" },
+];
+
+const MESSAGES = [
+  "Tu espalda te lo agradecerá",
+  "¡La gravedad es tu amiga de pie!",
+  "Los genios también se levantan",
+  "Activar modo vertical",
+  "Tu mesa elevable te extraña...",
+  "Circulación sanguínea: activada",
+  "Cambio de postura = nueva perspectiva",
+  "¡Arriba! Tu código no se va a ningún lado",
+  "Estirarse es el nuevo café",
+  "Un dev de pie vale por dos sentados",
+  "Tus discos lumbares te mandan saludos",
+  "Modo bipedestación: ON",
+];
+
+// ── Init ──
+(function init() {
+  buildParticles();
+  buildPresets();
+  updateRing();
+  checkNotifButton();
+})();
+
+function buildParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 14; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.top = Math.random() * 100 + '%';
+    p.style.setProperty('--dur', (3 + Math.random() * 5) + 's');
+    p.style.setProperty('--delay', (Math.random() * 4) + 's');
+    container.appendChild(p);
+  }
+}
+
+function buildPresets() {
+  const container = document.getElementById('presets');
+  PRESETS.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-chip' + (p.sit === sitMinutes && p.stand === standMinutes ? ' active' : '');
+    btn.textContent = `${p.label} (${p.sit}/${p.stand})`;
+    btn.onclick = () => applyPreset(i);
+    btn.id = 'preset-' + i;
+    container.appendChild(btn);
+  });
+}
+
+function applyPreset(index) {
+  const p = PRESETS[index];
+  sitMinutes = p.sit;
+  standMinutes = p.stand;
+  document.getElementById('sitSlider').value = p.sit;
+  document.getElementById('standSlider').value = p.stand;
+  document.getElementById('sitValue').textContent = p.sit + ' min';
+  document.getElementById('standValue').textContent = p.stand + ' min';
+  if (!isRunning) {
+    secondsLeft = isStanding ? standMinutes * 60 : sitMinutes * 60;
+    updateDisplay();
+  }
+  updatePresetHighlight();
+}
+
+function updatePresetHighlight() {
+  PRESETS.forEach((p, i) => {
+    const el = document.getElementById('preset-' + i);
+    el.className = 'preset-chip' + (p.sit === sitMinutes && p.stand === standMinutes ? ' active' : '');
+  });
+}
+
+// ── Timer logic ──
+function handleStart() {
+  if (!isRunning) {
+    isRunning = true;
+    requestNotif();
+    startTimer();
+    updateControls();
+    showStats();
+  }
+}
+
+function handlePause() {
+  isRunning = false;
+  clearInterval(timerInterval);
+  updateControls();
+}
+
+function handleReset() {
+  isRunning = false;
+  isStanding = false;
+  clearInterval(timerInterval);
+  secondsLeft = sitMinutes * 60;
+  totalStand = 0; totalSit = 0; cycles = 0;
+  document.body.classList.remove('standing');
+  updateDisplay();
+  updateControls();
+  updateStats();
+  document.getElementById('statsGrid').classList.add('hidden');
+  document.getElementById('ratioSection').classList.add('hidden');
+  updateStatusLabel();
+}
+
+function handleSkip() {
+  switchPhase();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    secondsLeft--;
+    if (isStanding) totalStand++; else totalSit++;
+
+    if (secondsLeft <= 0) {
+      playSound();
+      triggerAlert();
+      switchPhase();
+    }
+
+    updateDisplay();
+    updateStats();
+  }, 1000);
+}
+
+function switchPhase() {
+  if (isStanding) {
+    isStanding = false;
+    cycles++;
+    secondsLeft = sitMinutes * 60;
+    document.body.classList.remove('standing');
+    sendNotification('¡Hora de sentarse!', 'Buen trabajo. Ahora a concentrarte sentado.');
+  } else {
+    isStanding = true;
+    secondsLeft = standMinutes * 60;
+    document.body.classList.add('standing');
+    sendNotification('¡Hora de levantarse!', 'Sube la mesa y estira las piernas');
+  }
+  updateStatusLabel();
+  randomMotivation();
+  updateDisplay();
+  updateStats();
+}
+
+// ── UI Updates ──
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function updateDisplay() {
+  document.getElementById('timeDisplay').textContent = formatTime(secondsLeft);
+  document.getElementById('timeLabel').textContent =
+    (isStanding ? standMinutes + ' min de pie' : sitMinutes + ' min sentado');
+  updateRing();
+}
+
+function updateRing() {
+  const totalDuration = isStanding ? standMinutes * 60 : sitMinutes * 60;
+  const progress = 1 - (secondsLeft / totalDuration);
+  const offset = CIRCUMFERENCE * (1 - progress);
+  document.getElementById('ringProgress').setAttribute('stroke-dashoffset', offset);
+}
+
+function updateStatusLabel() {
+  const el = document.getElementById('statusLabel');
+  el.innerHTML = isStanding ? '&#x2B06; De pie' : '&#x2B07; Sentado';
+}
+
+function updateControls() {
+  const container = document.getElementById('controls');
+  let html = '';
+  if (!isRunning) {
+    const label = (totalStand + totalSit > 0) ? '&#x25B6; Continuar' : '&#x25B6; Empezar';
+    html = `<button class="btn btn-primary" onclick="handleStart()">${label}</button>`;
+  } else {
+    html = `<button class="btn btn-primary" style="background:rgba(255,255,255,0.1);border:1.5px solid var(--border)" onclick="handlePause()">&#x23F8; Pausa</button>`;
+    html += `<button class="btn btn-ghost" onclick="handleSkip()">&#x23ED; Saltar</button>`;
+  }
+  if (totalStand + totalSit > 0) {
+    html += `<button class="btn btn-ghost" onclick="handleReset()">&#x21BA; Reset</button>`;
+  }
+  container.innerHTML = html;
+}
+
+function showStats() {
+  document.getElementById('statsGrid').classList.remove('hidden');
+  document.getElementById('ratioSection').classList.remove('hidden');
+}
+
+function updateStats() {
+  document.getElementById('statStand').textContent = Math.floor(totalStand / 60) + 'm';
+  document.getElementById('statSit').textContent = Math.floor(totalSit / 60) + 'm';
+  document.getElementById('statCycles').textContent = cycles;
+
+  const total = totalStand + totalSit;
+  const pct = total > 0 ? Math.round((totalStand / total) * 100) : 0;
+  document.getElementById('ratioPercent').textContent = pct + '%';
+  document.getElementById('ratioFill').style.width = pct + '%';
+  document.getElementById('ratioHint').textContent =
+    pct >= 25 ? '¡Buen equilibrio!' : 'Intenta superar el 25%';
+}
+
+function randomMotivation() {
+  const el = document.getElementById('motivation');
+  el.style.opacity = '0';
+  setTimeout(() => {
+    el.textContent = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+    el.style.opacity = '1';
+  }, 300);
+}
+
+// ── Settings ──
+function toggleSettings() {
+  const panel = document.getElementById('settingsPanel');
+  const btn = document.getElementById('btnSettings');
+  panel.classList.toggle('hidden');
+  btn.innerHTML = panel.classList.contains('hidden') ? '&#x2699; Ajustes de tiempos' : '&#x2715; Cerrar ajustes';
+}
+
+function onSitChange(val) {
+  sitMinutes = parseInt(val);
+  document.getElementById('sitValue').textContent = sitMinutes + ' min';
+  if (!isRunning && !isStanding) { secondsLeft = sitMinutes * 60; updateDisplay(); }
+  updatePresetHighlight();
+}
+
+function onStandChange(val) {
+  standMinutes = parseInt(val);
+  document.getElementById('standValue').textContent = standMinutes + ' min';
+  if (!isRunning && isStanding) { secondsLeft = standMinutes * 60; updateDisplay(); }
+  updatePresetHighlight();
+}
+
+// ── Sound ──
+function playSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.5);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.5);
+    });
+  } catch(e) {}
+}
+
+// ── Alert flash ──
+function triggerAlert() {
+  const overlay = document.getElementById('alertOverlay');
+  const ring = document.getElementById('pulseRing');
+  overlay.style.background = isStanding
+    ? 'radial-gradient(circle, rgba(34,197,94,0.18) 0%, transparent 70%)'
+    : 'radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%)';
+  overlay.classList.add('active');
+  ring.classList.add('active');
+  setTimeout(() => { overlay.classList.remove('active'); ring.classList.remove('active'); }, 2500);
+}
+
+// ── Notifications ──
+function checkNotifButton() {
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    document.getElementById('btnNotif').classList.remove('hidden');
+  }
+}
+
+function requestNotif() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(() => {
+      if (Notification.permission === 'granted') {
+        document.getElementById('btnNotif').classList.add('hidden');
+      }
+    });
+  }
+}
+
+function sendNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification(title, { body }); } catch(e) {}
+  }
+}
+</script>
+</body>
+</html>
