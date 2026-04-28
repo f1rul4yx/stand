@@ -26,7 +26,7 @@ Variables de entorno opcionales en `docker-compose.yml`:
 docker compose up -d
 ```
 
-Accede a `http://localhost:3000`.
+Accede a `http://TU_IP:3000`.
 
 ```bash
 docker compose down       # Parar
