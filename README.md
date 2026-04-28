@@ -1,32 +1,40 @@
-# Stand Reminder
+# stand
 
-Recordatorio para alternar entre sentado y de pie durante la jornada laboral. Temporizador con anillo de progreso, notificaciones del navegador, estadísticas de sesión y presets configurables.
+Recordatorio para alternar entre sentado y de pie durante la jornada laboral.
 
-## Características
+## Qué es
 
-- Temporizador visual con anillo de progreso
-- Cambio automático entre fase sentado / de pie
-- Notificaciones del navegador (funcionan en segundo plano)
-- Presets rápidos: Pomodoro, Equilibrado, Activo, Concentrado
-- Sliders para personalizar los tiempos
-- Estadísticas: tiempo de pie, tiempo sentado, ciclos completados y ratio
+Temporizador web con anillo de progreso que alterna entre fases de sentado y de pie. Incluye notificaciones del navegador, presets rápidos (Pomodoro, Equilibrado, Activo, Concentrado) y estadísticas de sesión.
 
-## Uso con Docker
+## Instalación
+
+```bash
+git clone https://github.com/f1rul4yx/stand.git
+cd stand
+```
+
+Variables de entorno opcionales en `docker-compose.yml`:
+
+| Variable | Por defecto | Descripción |
+|---|---|---|
+| `PORT` | `3000` | Puerto del servidor |
+| `TZ` | `Europe/Madrid` | Zona horaria |
+
+## Uso
 
 ```bash
 docker compose up -d
 ```
 
-La app estará disponible en `http://localhost:3000`.
+Accede a `http://localhost:3000`.
 
-## Variables de entorno
+```bash
+docker compose down       # Parar
+docker compose restart    # Reiniciar
+docker compose logs -f    # Ver logs
+```
 
-| Variable | Valor por defecto | Descripción |
-|----------|-------------------|-------------|
-| `PORT`   | `3000`            | Puerto del servidor |
-| `TZ`     | `Europe/Madrid`   | Zona horaria del contenedor |
-
-## Build local
+## Build
 
 ```bash
 cd build
