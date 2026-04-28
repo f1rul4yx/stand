@@ -37,7 +37,6 @@ docker compose logs -f    # Ver logs
 ## Build
 
 ```bash
-cd build
-npm install
-npm start
+docker build -t f1rul4yx/stand:latest ./build
+docker push f1rul4yx/stand:latest
 ```
